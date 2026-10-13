@@ -1,0 +1,22 @@
+{
+  "name": "signals",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web",
+    "apps/api"
+  ],
+  "scripts": {
+    "dev:web": "npm run dev --workspace @signals/web",
+    "dev:api": "npm run dev --workspace @signals/api",
+    "build": "npm run build --workspace @signals/web && npm run build --workspace @signals/api",
+    "typecheck": "npm run typecheck --workspace @signals/web && npm run typecheck --workspace @signals/api",
+    "db:migrate": "npm run migrate --workspace @signals/api",
+    "test": "npm run test --workspace @signals/api",
+    "user:grant": "npm run grant --workspace @signals/api",
+    "setup:local": "node scripts/setup-local.mjs"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

@@ -1,0 +1,150 @@
+services:
+  platform-db:
+    image: postgres:16-alpine
+    container_name: signals-platform-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${PLATFORM_DB_NAME:-platform}
+      POSTGRES_USER: ${PLATFORM_DB_USER:-platform}
+      POSTGRES_PASSWORD: ${PLATFORM_DB_PASSWORD:-change-me-platform}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - platform-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PLATFORM_DB_USER:-platform} -d ${PLATFORM_DB_NAME:-platform}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: signals-keycloak-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-change-me-keycloak-db}
+    volumes:
+      - keycloak-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    container_name: signals-keycloak
+    command: ["start-dev", "--import-realm"]
+    restart: unless-stopped
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-change-me-keycloak-db}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-change-me-keycloak}
+    ports:
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - ../../products/keycloak/realm/signals-realm.json:/opt/keycloak/data/import/signals-realm.json:ro
+
+  glpi-db:
+    profiles: ["products"]
+    image: mariadb:11.4
+    container_name: signals-glpi-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${GLPI_DB_NAME:-glpi}
+      MARIADB_USER: ${GLPI_DB_USER:-glpi}
+      MARIADB_PASSWORD: ${GLPI_DB_PASSWORD:-change-me-glpi}
+      MARIADB_ROOT_PASSWORD: ${GLPI_DB_ROOT_PASSWORD:-change-me-glpi-root}
+    volumes:
+      - glpi-db-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  glpi:
+    profiles: ["products"]
+    image: glpi/glpi:latest
+    container_name: signals-glpi
+    restart: unless-stopped
+    depends_on:
+      glpi-db:
+        condition: service_healthy
+    environment:
+      GLPI_DB_HOST: glpi-db
+      GLPI_DB_NAME: ${GLPI_DB_NAME:-glpi}
+      GLPI_DB_USER: ${GLPI_DB_USER:-glpi}
+      GLPI_DB_PASSWORD: ${GLPI_DB_PASSWORD:-change-me-glpi}
+    ports:
+      - "8081:80"
+    volumes:
+      - glpi-files:/var/glpi
+
+  zabbix-db:
+    profiles: ["products"]
+    image: postgres:16-alpine
+    container_name: signals-zabbix-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${ZABBIX_DB_NAME:-zabbix}
+      POSTGRES_USER: ${ZABBIX_DB_USER:-zabbix}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-change-me-zabbix}
+    volumes:
+      - zabbix-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${ZABBIX_DB_USER:-zabbix} -d ${ZABBIX_DB_NAME:-zabbix}"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  zabbix-server:
+    profiles: ["products"]
+    image: zabbix/zabbix-server-pgsql:alpine-7.0-latest
+    container_name: signals-zabbix-server
+    restart: unless-stopped
+    depends_on:
+      zabbix-db:
+        condition: service_healthy
+    environment:
+      DB_SERVER_HOST: zabbix-db
+      POSTGRES_DB: ${ZABBIX_DB_NAME:-zabbix}
+      POSTGRES_USER: ${ZABBIX_DB_USER:-zabbix}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-change-me-zabbix}
+    ports:
+      - "10051:10051"
+
+  zabbix-web:
+    profiles: ["products"]
+    image: zabbix/zabbix-web-nginx-pgsql:alpine-7.0-latest
+    container_name: signals-zabbix-web
+    restart: unless-stopped
+    depends_on:
+      zabbix-server:
+        condition: service_started
+      zabbix-db:
+        condition: service_healthy
+    environment:
+      DB_SERVER_HOST: zabbix-db
+      POSTGRES_DB: ${ZABBIX_DB_NAME:-zabbix}
+      POSTGRES_USER: ${ZABBIX_DB_USER:-zabbix}
+      POSTGRES_PASSWORD: ${ZABBIX_DB_PASSWORD:-change-me-zabbix}
+      ZBX_SERVER_HOST: zabbix-server
+      PHP_TZ: Asia/Kolkata
+    ports:
+      - "8082:8080"
+
+volumes:
+  platform-db-data:
+  keycloak-db-data:
+  glpi-db-data:
+  glpi-files:
+  zabbix-db-data:

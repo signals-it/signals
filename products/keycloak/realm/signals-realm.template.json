@@ -1,0 +1,44 @@
+{
+  "realm": "signals",
+  "enabled": true,
+  "displayName": "Signals",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": true,
+  "rememberMe": false,
+  "sslRequired": "external",
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 1800,
+  "ssoSessionMaxLifespan": 28800,
+  "bruteForceProtected": true,
+  "clients": [
+    {
+      "clientId": "signals-bff",
+      "name": "Signals Node BFF",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "GENERATED_BY_SETUP",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "implicitFlowEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": [
+        "http://localhost:5173/auth/callback"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost:5173"
+      },
+      "defaultClientScopes": [
+        "web-origins",
+        "profile",
+        "email",
+        "roles"
+      ]
+    }
+  ]
+}

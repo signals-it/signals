@@ -1,0 +1,3 @@
+# Convenience entry point; compose configuration is maintained under deploy/compose.
+include:
+  - path: deploy/compose/compose.yaml
