@@ -51,7 +51,7 @@ services:
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
-      - ../../products/keycloak/realm/signals-realm.json:/opt/keycloak/data/import/signals-realm.json:ro
+      - ../../products/keycloak/realm-config:/opt/keycloak/data/import:ro
 
   glpi-db:
     profiles: ["products"]

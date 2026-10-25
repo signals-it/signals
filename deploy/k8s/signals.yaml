@@ -1,0 +1,158 @@
+# Reference Kubernetes layout for Signals.
+#
+#   - signals-ui : one pod with two containers (SPA + proxy API). The SPA is
+#     served by nginx and reaches the proxy at 127.0.0.1:4000. The proxy API is
+#     never exposed directly.
+#   - signals-api: the Signals backend API, deployed and scaled independently
+#     and reachable only from the proxy API through the internal Service.
+#
+# Replace image references, hostnames and secret values before applying.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: signals-config
+data:
+  NODE_ENV: "production"
+  API_HOST: "0.0.0.0"
+  API_PORT: "4000"
+  BACKEND_API_HOST: "0.0.0.0"
+  BACKEND_API_PORT: "4100"
+  APP_ORIGIN: "https://signals.example.com"
+  OIDC_CALLBACK_URL: "https://signals.example.com/auth/callback"
+  OIDC_ISSUER: "https://auth.example.com/realms/signals"
+  KEYCLOAK_CLIENT_ID: "signals-bff"
+  # Internal DNS name of the backend API Service.
+  SIGNALS_BACKEND_BASE_URL: "http://signals-api:4100"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: signals-secrets
+type: Opaque
+stringData:
+  # Inject from a secrets manager. Placeholders only.
+  PLATFORM_DATABASE_URL: "postgresql://signals:change-me@signals-platform-db:5432/signals"
+  SESSION_ENCRYPTION_KEY: "REPLACE_WITH_32_BYTE_BASE64_KEY"
+  KEYCLOAK_CLIENT_SECRET: "REPLACE_WITH_KEYCLOAK_CLIENT_SECRET"
+  BACKEND_INTERNAL_TOKEN: "REPLACE_WITH_SHARED_PROXY_BACKEND_TOKEN"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signals-ui
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: signals-ui
+  template:
+    metadata:
+      labels:
+        app: signals-ui
+    spec:
+      containers:
+        - name: web
+          image: signals-web:0.1.0
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8080
+          resources:
+            requests: { cpu: "50m", memory: "64Mi" }
+            limits: { cpu: "250m", memory: "128Mi" }
+        - name: proxy-api
+          image: signals-proxy-api:0.1.0
+          ports:
+            - containerPort: 4000
+          envFrom:
+            - configMapRef: { name: signals-config }
+            - secretRef: { name: signals-secrets }
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 4000
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 4000
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits: { cpu: "500m", memory: "256Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: signals-ui
+spec:
+  selector:
+    app: signals-ui
+  ports:
+    - port: 80
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: signals-api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: signals-api
+  template:
+    metadata:
+      labels:
+        app: signals-api
+    spec:
+      containers:
+        - name: api
+          image: signals-api:0.1.0
+          ports:
+            - containerPort: 4100
+          envFrom:
+            - configMapRef: { name: signals-config }
+            - secretRef: { name: signals-secrets }
+          readinessProbe:
+            httpGet:
+              path: /health/ready
+              port: 4100
+            initialDelaySeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 4100
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits: { cpu: "500m", memory: "256Mi" }
+---
+# Internal only: no Ingress; reachable solely by the proxy API.
+apiVersion: v1
+kind: Service
+metadata:
+  name: signals-api
+spec:
+  selector:
+    app: signals-api
+  ports:
+    - port: 4100
+      targetPort: 4100
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: signals-ui
+spec:
+  rules:
+    - host: signals.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: signals-ui
+                port:
+                  number: 80

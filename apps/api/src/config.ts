@@ -9,19 +9,9 @@ function required(name: string) {
 }
 export const settings = {
   database: required('PLATFORM_DATABASE_URL'),
-  key: Buffer.from(required('SESSION_ENCRYPTION_KEY'), 'base64'),
-  issuer: required('OIDC_ISSUER'),
-  clientId: process.env.KEYCLOAK_CLIENT_ID ?? 'signals-bff',
-  clientSecret: required('KEYCLOAK_CLIENT_SECRET'),
-  origin: process.env.APP_ORIGIN ?? 'http://localhost:5173',
-  callback: process.env.OIDC_CALLBACK_URL ?? 'http://localhost:5173/auth/callback',
-  cookie: production ? '__Host-signals_session' : 'signals_session',
-  transactionCookie: production ? '__Host-signals_login' : 'signals_login',
-  idleMs: 30 * 60 * 1000,
-  absoluteMs: 8 * 60 * 60 * 1000,
+  host: process.env.BACKEND_API_HOST ?? '127.0.0.1',
+  port: Number(process.env.BACKEND_API_PORT ?? 4100),
+  // Shared secret proving a request came from the authenticated proxy API.
+  internalToken: process.env.BACKEND_INTERNAL_TOKEN ?? '',
 };
-if (settings.key.length !== 32) throw new Error('SESSION_ENCRYPTION_KEY must decode to 32 bytes');
-if (production && [settings.origin, settings.callback, settings.issuer].some(v => new URL(v).protocol !== 'https:')) {
-  throw new Error('Production requires HTTPS for origin, callback and issuer');
-}
-if (new URL(settings.callback).origin !== settings.origin) throw new Error('Callback must use APP_ORIGIN');
+if (production && !settings.internalToken) throw new Error('BACKEND_INTERNAL_TOKEN is required in production');

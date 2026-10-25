@@ -4,15 +4,17 @@
   "version": "0.1.0",
   "workspaces": [
     "apps/web",
-    "apps/api"
+    "apps/api",
+    "apps/proxy-api"
   ],
   "scripts": {
     "dev:web": "npm run dev --workspace @signals/web",
     "dev:api": "npm run dev --workspace @signals/api",
-    "build": "npm run build --workspace @signals/web && npm run build --workspace @signals/api",
-    "typecheck": "npm run typecheck --workspace @signals/web && npm run typecheck --workspace @signals/api",
+    "dev:proxy": "npm run dev --workspace @signals/proxy-api",
+    "build": "npm run build --workspace @signals/web && npm run build --workspace @signals/api && npm run build --workspace @signals/proxy-api",
+    "typecheck": "npm run typecheck --workspace @signals/web && npm run typecheck --workspace @signals/api && npm run typecheck --workspace @signals/proxy-api",
     "db:migrate": "npm run migrate --workspace @signals/api",
-    "test": "npm run test --workspace @signals/api",
+    "test": "npm run test --workspace @signals/api && npm run test --workspace @signals/proxy-api",
     "user:grant": "npm run grant --workspace @signals/api",
     "setup:local": "node scripts/setup-local.mjs"
   },

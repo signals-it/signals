@@ -1,0 +1,97 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Install dependencies",
+      "type": "shell",
+      "command": "npm ci",
+      "group": "none",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Validate Keycloak config",
+      "type": "shell",
+      "command": "npm run keycloak:validate",
+      "group": "none",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Setup local (.env + realm)",
+      "type": "shell",
+      "command": "npm run setup:local",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Start platform-db & keycloak (docker)",
+      "type": "shell",
+      "command": "sudo docker compose --env-file .env up -d platform-db keycloak",
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Run DB migrations",
+      "type": "shell",
+      "command": "npm run db:migrate",
+      "group": "none",
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Start Backend API (dev)",
+      "type": "shell",
+      "command": "npm run dev:api",
+      "group": "none",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Start Proxy API (dev)",
+      "type": "shell",
+      "command": "npm run dev:proxy",
+      "group": "none",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Start Web (dev)",
+      "type": "shell",
+      "command": "npm run dev:web",
+      "group": "none",
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Start local stack (all)",
+      "dependsOn": [
+        "Install dependencies",
+        "Setup local (.env + realm)",
+        "Start platform-db (docker)", // waits until pg_isready
+        "Run DB migrations", // now safe to run
+        "Start keycloak (docker)", // doesn't block app servers
+        "Start Backend API (dev)",
+        "Start Proxy API (dev)",
+        "Start Web (dev)"
+      ],
+      "dependsOrder": "sequence",
+      "runOptions": {
+        "runOn": "default"
+      }
+    }
+  ]
+}

@@ -15,7 +15,7 @@ The starter uses one realm with application-managed memberships. A user may acce
 
 The Signals portal session does not automatically create a native product session. To launch native screens without repeated credential entry, each product must independently trust Keycloak through a supported SAML/OIDC plugin or documented reverse-proxy authentication mechanism. Confirm product edition/version support, user mapping, role mapping and logout behavior. Never pass passwords, Signals session cookies, or privileged API tokens into browser URLs.
 
-Rebuilt React screens can use the existing Signals BFF session. Their server adapters must enforce tenant and role checks and map access to the appropriate product instance/entity. A shared service-account token requires explicit per-user/tenant authorization and auditing. None of these product adapters is connected in this starter.
+Rebuilt React screens can use the existing Signals proxy API session. Their server adapters must enforce tenant and role checks and map access to the appropriate product instance/entity. A shared service-account token requires explicit per-user/tenant authorization and auditing. None of these product adapters is connected in this starter.
 
 Reference: https://www.keycloak.org/securing-apps/oidc-layers
 Administration: https://www.keycloak.org/docs/latest/server_admin/

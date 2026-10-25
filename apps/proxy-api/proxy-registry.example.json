@@ -1,0 +1,6 @@
+{
+  "_comment": "Backend operation registry for the centralized proxy. Only listed path patterns and methods may be proxied. Set PROXY_REGISTRY_PATH to point at a copy of this file.",
+  "operations": [
+    { "pattern": "/signals/api/v1/*", "methods": ["GET", "POST", "PUT", "PATCH", "DELETE"] }
+  ]
+}

@@ -57,12 +57,24 @@ export default function App() {
 
   useEffect(() => {
     if (!session || !tenant) return;
-    const base = '/api';
+    // The SPA only talks to the proxy API. Backend calls are forwarded through
+    // POST /api/proxy and never sent directly to the Signals backend API.
     Promise.all([
-      fetch(`${base}/health`).then((r) => { if (!r.ok) throw new Error('API health request failed'); return r.json(); }),
-      fetch(`${base}/tenants/${tenant}/integrations`).then((r) => { if (r.status === 401) { setSession(null); throw new Error('Session expired'); } if (!r.ok) throw new Error('Integration status request failed'); return r.json(); }),
+      fetch('/api/health').then((r) => { if (!r.ok) throw new Error('API health request failed'); return r.json(); }),
+      fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': session.csrfToken },
+        body: JSON.stringify({ method: 'GET', path: `/signals/api/v1/tenants/${tenant}/integrations` }),
+      }).then(async (r) => {
+        if (r.status === 401) { setSession(null); throw new Error('Session expired'); }
+        if (!r.ok) throw new Error('Integration status request failed');
+        const envelope = await r.json();
+        if (envelope.status === 401) { setSession(null); throw new Error('Session expired'); }
+        if (envelope.status !== 200) throw new Error('Integration status request failed');
+        return envelope.body as { integrations?: Integration[] };
+      }),
     ]).then(([h, i]) => { setHealth(h); setIntegrations(i.integrations ?? []); })
-      .catch(() => setApiError('API is not reachable. Start the Node.js API on port 4000.'));
+      .catch(() => setApiError('API is not reachable. Start the proxy API (port 4000) and backend API (port 4100).'));
   }, [session, tenant]);
 
   if (loading) return <main className="login-page"><h1>Signals</h1><p>Checking your session…</p></main>;

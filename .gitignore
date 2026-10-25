@@ -5,4 +5,8 @@ dist/
 !.env.example
 products/keycloak/realm/signals-realm.json
 *.log
+*.tsbuildinfo
 .DS_Store
+
+.continue/
+/products/keycloak/realm-config/
